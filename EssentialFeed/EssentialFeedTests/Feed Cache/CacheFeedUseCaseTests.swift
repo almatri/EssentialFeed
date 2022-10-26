@@ -11,30 +11,31 @@ import XCTest
 
 class LocalFeedLoader {
     let store: FeedStore
+    let timestamp: () -> Date
     
-    init(store: FeedStore) {
+    init(store: FeedStore, timestamp: @escaping () -> Date) {
         self.store = store
+        self.timestamp = timestamp
     }
     
     func save(items: [FeedItem]) {
         store.deleteCacheFeed { [weak self] error in
             if let self = self {
                 if error == nil {
-                    self.store.insertCache()
+                    self.store.insertCache(items: items, timestamp: self.timestamp())
                 }
             }
         }
     }
-    
 }
 
 class FeedStore {
     typealias DeletionCompletion = ((Error?) -> Void)
     
     var deleteCacheFeedCallCount = 0
-    var insertCallCount = 0
     
     var deletionCompletions: [DeletionCompletion] = []
+    var insertions: [(items: [FeedItem], timestamp: Date)] = []
     
     func deleteCacheFeed(completion: @escaping DeletionCompletion) {
         deleteCacheFeedCallCount += 1
@@ -49,8 +50,8 @@ class FeedStore {
         deletionCompletions[index](nil)
     }
     
-    func insertCache() {
-        insertCallCount += 1
+    func insertCache(items: [FeedItem], timestamp: Date) {
+        insertions.append((items: items, timestamp: timestamp))
     }
 }
 
@@ -76,21 +77,24 @@ class CacheFeedUseCaseTests: XCTestCase {
         sut.save(items: [uniqueItem(),uniqueItem(),uniqueItem()])
         store.completeDeletion(with: anyNSError())
         
-        XCTAssertEqual(store.insertCallCount, 0)
+        XCTAssertEqual(store.insertions.count, 0)
     }
-    
-    func test_save_requestInsertionOnSuccessCacheDeletion() {
-        let (sut, store) = makeSUT()
-        
-        sut.save(items: [uniqueItem(),uniqueItem(),uniqueItem()])
+
+    func test_save_requestInsertionWithTimestampOnSuccessCacheDeletion() {
+        let currentDate = Date()
+        let (sut, store) = makeSUT(timestamp: { currentDate })
+        let items = [uniqueItem(),uniqueItem(),uniqueItem()]
+        sut.save(items: items)
         store.completeDeletionSuccessfully()
         
-        XCTAssertEqual(store.insertCallCount, 1)
+        XCTAssertEqual(store.insertions.count, 1)
+        XCTAssertEqual(store.insertions.first?.items, items)
+        XCTAssertEqual(store.insertions.first?.timestamp, currentDate)
     }
     
-    func makeSUT(file: StaticString = #file, line: UInt = #line) -> (sut: LocalFeedLoader, store: FeedStore) {
+    func makeSUT(timestamp: @escaping () -> Date = Date.init, file: StaticString = #file, line: UInt = #line) -> (sut: LocalFeedLoader, store: FeedStore) {
         let store = FeedStore()
-        let sut = LocalFeedLoader(store: store)
+        let sut = LocalFeedLoader(store: store, timestamp: timestamp)
         trackForMemoryLeaks(store, file: file, line: line)
         trackForMemoryLeaks(sut, file: file, line: line)
         return (sut, store)
