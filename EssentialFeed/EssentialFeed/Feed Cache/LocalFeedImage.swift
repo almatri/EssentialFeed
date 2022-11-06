@@ -1,5 +1,5 @@
 //
-//  LocalFeedItem.swift
+//  LocalFeedImage.swift
 //  EssentialFeed
 //
 //  Created by Musa Almatri on 06/11/2022.
