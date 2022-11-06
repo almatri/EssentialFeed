@@ -12,7 +12,7 @@ import XCTest
 class FeedStoreSpy: FeedStore {
     enum ReceivedMessage: Equatable {
         case deleteCacheFeed
-        case insertCache([LocalFeedItem], Date)
+        case insertCache([LocalFeedImage], Date)
     }
    
     var deletionCompletions: [DeletionCompletion] = []
@@ -33,7 +33,7 @@ class FeedStoreSpy: FeedStore {
         deletionCompletions[index](nil)
     }
     
-    func insertCache(items: [LocalFeedItem], timestamp: Date, completion: @escaping InsertionCompletion) {
+    func insertCache(items: [LocalFeedImage], timestamp: Date, completion: @escaping InsertionCompletion) {
         receivedMessages.append(.insertCache(items, timestamp))
         insertionCompletions.append(completion)
     }
@@ -157,12 +157,12 @@ class CacheFeedUseCaseTests: XCTestCase {
         XCTAssertEqual(expectedError?.domain, receivedError?.domain)
     }
     
-    func uniqueItems() -> (models: [FeedItem], local: [LocalFeedItem]) {
+    func uniqueItems() -> (models: [FeedImage], local: [LocalFeedImage]) {
         let items = [uniqueItem(),uniqueItem(),uniqueItem()]
-        let localItems = items.map { LocalFeedItem(id: $0.id,
+        let localItems = items.map { LocalFeedImage(id: $0.id,
                                                    description: $0.description,
                                                    location: $0.location,
-                                                   image: $0.url) }
+                                                   url: $0.url) }
         return (items, localItems)
     }
     
@@ -174,7 +174,7 @@ class CacheFeedUseCaseTests: XCTestCase {
         return (sut, store)
     }
     
-    func uniqueItem() -> FeedItem {
-        FeedItem(id: UUID(), description: "any", location: "any", imageURL: anyURL())
+    func uniqueItem() -> FeedImage {
+        FeedImage(id: UUID(), description: "any", location: "any", url: anyURL())
     }
 }
