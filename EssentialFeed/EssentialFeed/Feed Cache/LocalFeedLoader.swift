@@ -44,6 +44,6 @@ private extension Array where Element == FeedItem {
         return map { LocalFeedItem(id: $0.id,
                                    description: $0.description,
                                    location: $0.location,
-                                   image: $0.image) }
+                                   image: $0.url) }
     }
 }
