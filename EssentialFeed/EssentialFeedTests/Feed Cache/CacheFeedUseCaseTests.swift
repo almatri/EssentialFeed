@@ -9,44 +9,6 @@
 import XCTest
 @testable import EssentialFeed
 
-class FeedStoreSpy: FeedStore {
-    enum ReceivedMessage: Equatable {
-        case deleteCacheFeed
-        case insertCache([LocalFeedImage], Date)
-    }
-   
-    var deletionCompletions: [DeletionCompletion] = []
-    var insertionCompletions: [InsertionCompletion] = []
-
-    var receivedMessages: [ReceivedMessage] = []
-    
-    func deleteCacheFeed(completion: @escaping DeletionCompletion) {
-        receivedMessages.append(.deleteCacheFeed)
-        deletionCompletions.append(completion)
-    }
-    
-    func completeDeletion(with error: Error, at index: Int = 0) {
-        deletionCompletions[index](error)
-    }
-    
-    func completeDeletionSuccessfully(at index: Int = 0) {
-        deletionCompletions[index](nil)
-    }
-    
-    func insertCache(feed: [LocalFeedImage], timestamp: Date, completion: @escaping InsertionCompletion) {
-        receivedMessages.append(.insertCache(feed, timestamp))
-        insertionCompletions.append(completion)
-    }
-    
-    func completeInsertionSuccessfully(at index: Int = 0) {
-        insertionCompletions[index](nil)
-    }
-    
-    func completeInsertion(with error: Error, at index: Int = 0) {
-        insertionCompletions[index](error)
-    }
-}
-
 class CacheFeedUseCaseTests: XCTestCase {
     
     func test_init_doesNotMessageStoreUponCreation() {
@@ -157,6 +119,10 @@ class CacheFeedUseCaseTests: XCTestCase {
         XCTAssertEqual(expectedError?.domain, receivedError?.domain)
     }
     
+    func uniqueImage() -> FeedImage {
+        FeedImage(id: UUID(), description: "any", location: "any", url: anyURL())
+    }
+    
     func uniqueImageFeed() -> (models: [FeedImage], local: [LocalFeedImage]) {
         let images = [uniqueImage(),uniqueImage(),uniqueImage()]
         let localFeedImage = images.map { LocalFeedImage(id: $0.id,
@@ -172,9 +138,5 @@ class CacheFeedUseCaseTests: XCTestCase {
         trackForMemoryLeaks(store, file: file, line: line)
         trackForMemoryLeaks(sut, file: file, line: line)
         return (sut, store)
-    }
-    
-    func uniqueImage() -> FeedImage {
-        FeedImage(id: UUID(), description: "any", location: "any", url: anyURL())
     }
 }

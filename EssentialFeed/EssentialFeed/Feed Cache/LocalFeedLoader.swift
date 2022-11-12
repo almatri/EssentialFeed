@@ -13,6 +13,7 @@ public final class LocalFeedLoader {
     let timestamp: () -> Date
     
     public typealias SaveResult = Error?
+    public typealias LoadResult = LoadFeedResult?
     
     public init(store: FeedStore, timestamp: @escaping () -> Date) {
         self.store = store
@@ -31,6 +32,19 @@ public final class LocalFeedLoader {
         }
     }
     
+    public func load(completion: @escaping (LoadResult?) -> Void) {
+        store.retrieve { result in
+            switch result {
+            case let .failure(error: error):
+                completion(.failure(error))
+            case .empty:
+                completion(.success([]))
+            case let .found(feed, timestamp):
+                completion(.success(feed.toModel()))
+            }
+        }
+    }
+    
     private func cache(_ feed: [FeedImage], with completion: @escaping (SaveResult) -> Void) {
         store.insertCache(feed: feed.toLocal(), timestamp: timestamp()) { [weak self] error in
             guard self != nil else { return }
@@ -42,6 +56,15 @@ public final class LocalFeedLoader {
 private extension Array where Element == FeedImage {
     func toLocal() -> [LocalFeedImage] {
         return map { LocalFeedImage(id: $0.id,
+                                   description: $0.description,
+                                   location: $0.location,
+                                   url: $0.url) }
+    }
+}
+
+private extension Array where Element == LocalFeedImage {
+    func toModel() -> [FeedImage] {
+        return map { FeedImage(id: $0.id,
                                    description: $0.description,
                                    location: $0.location,
                                    url: $0.url) }
