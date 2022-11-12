@@ -42,7 +42,7 @@ class LoadFeedFromCacheUseCaseTests: XCTestCase {
         }
     }
     
-    func test_load_deliverCachedImagesOnLessThanSevenDaysCache() {
+    func test_load_deliverCachedImagesOnLessThanSevenDaysOldCache() {
         let feed = uniqueImageFeed()
         let fixedCurrentDate = Date()
         let lessThanSevenDaysTimeStamp = fixedCurrentDate.adding(days: -7).adding(seconds: 1)
@@ -53,6 +53,27 @@ class LoadFeedFromCacheUseCaseTests: XCTestCase {
         }
     }
     
+    func test_load_deliverNoCacheImagesOnSevenDaysOldCache() {
+        let feed = uniqueImageFeed()
+        let fixedCurrentDate = Date()
+        let sevenDaysTimeStamp = fixedCurrentDate.adding(days: -7)
+        let (sut, store) = makeSUT(timestamp: {fixedCurrentDate})
+        
+        expect(sut, toCompleteWith: .success([])) {
+            store.completeRetrival(with: feed.local, timestamp: sevenDaysTimeStamp)
+        }
+    }
+    
+    func test_load_deliverNoCacheImagesOnMoreThanSevenDaysOldCache() {
+        let feed = uniqueImageFeed()
+        let fixedCurrentDate = Date()
+        let sevenDaysTimeStamp = fixedCurrentDate.adding(days: -7).adding(seconds: -1)
+        let (sut, store) = makeSUT(timestamp: {fixedCurrentDate})
+        
+        expect(sut, toCompleteWith: .success([])) {
+            store.completeRetrival(with: feed.local, timestamp: sevenDaysTimeStamp)
+        }
+    }
     
     func expect(_ sut: LocalFeedLoader, toCompleteWith expectedResult: LocalFeedLoader.LoadResult, file: StaticString = #file, line: UInt = #line , when action: () -> ()) {
         let exp = expectation(description: "wait for response")

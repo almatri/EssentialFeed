@@ -15,6 +15,9 @@ public final class LocalFeedLoader {
     public typealias SaveResult = Error?
     public typealias LoadResult = LoadFeedResult?
     
+    let maxCachedDays = 7
+    let gregorianCalender = Calendar(identifier: .gregorian)
+    
     public init(store: FeedStore, timestamp: @escaping () -> Date) {
         self.store = store
         self.timestamp = timestamp
@@ -33,14 +36,18 @@ public final class LocalFeedLoader {
     }
     
     public func load(completion: @escaping (LoadResult?) -> Void) {
-        store.retrieve { result in
+        store.retrieve { [unowned self] result in
             switch result {
             case let .failure(error: error):
                 completion(.failure(error))
+            case let .found(feed, timestamp):
+                if timestamp > gregorianCalender.date(byAdding: .day, value: -self.maxCachedDays, to: self.timestamp())! {
+                    completion(.success(feed.toModel()))
+                } else {
+                    completion(.success([]))
+                }
             case .empty:
                 completion(.success([]))
-            case let .found(feed, timestamp):
-                completion(.success(feed.toModel()))
             }
         }
     }
