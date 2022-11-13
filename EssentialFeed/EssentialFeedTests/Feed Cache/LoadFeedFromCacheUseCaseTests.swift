@@ -75,6 +75,73 @@ class LoadFeedFromCacheUseCaseTests: XCTestCase {
         }
     }
     
+    func test_load_deleteCacheOnRetrivalError() {
+        let (sut, store) = makeSUT()
+        
+        sut.load { _ in }
+        store.completeRetrival(with: anyNSError())
+        
+        XCTAssertEqual(store.receivedMessages, [.retrive, .deleteCacheFeed])
+    }
+    
+    func test_load_doesNotdeleteCacheOnEmptyCache() {
+        let (sut, store) = makeSUT()
+        
+        sut.load { _ in }
+        store.completeRetrivalWithEmptyCache()
+        
+        XCTAssertEqual(store.receivedMessages, [.retrive])
+    }
+    
+    func test_load_deleteCacheOnOlderThanSevenDaysCache() {
+        let feed = uniqueImageFeed()
+        let fixedCurrentDate = Date()
+        let sevenDaysTimeStamp = fixedCurrentDate.adding(days: -7).adding(seconds: -1)
+        let (sut, store) = makeSUT(timestamp: {fixedCurrentDate})
+        
+        sut.load { _ in }
+        store.completeRetrival(with: feed.local, timestamp: sevenDaysTimeStamp)
+        
+        XCTAssertEqual(store.receivedMessages, [.retrive, .deleteCacheFeed])
+    }
+    
+    func test_load_doesNotDeleteCacheOnSevenDaysCache() {
+        let feed = uniqueImageFeed()
+        let fixedCurrentDate = Date()
+        let sevenDaysTimeStamp = fixedCurrentDate.adding(days: -7)
+        let (sut, store) = makeSUT(timestamp: {fixedCurrentDate})
+        
+        sut.load { _ in }
+        store.completeRetrival(with: feed.local, timestamp: sevenDaysTimeStamp)
+        
+        XCTAssertEqual(store.receivedMessages, [.retrive, .deleteCacheFeed])
+    }
+    
+    func test_load_doesNotDeleteCacheOnLessThanSevenDaysCache() {
+        let feed = uniqueImageFeed()
+        let fixedCurrentDate = Date()
+        let sevenDaysTimeStamp = fixedCurrentDate.adding(days: -7).adding(seconds: 1)
+        let (sut, store) = makeSUT(timestamp: {fixedCurrentDate})
+        
+        sut.load { _ in }
+        store.completeRetrival(with: feed.local, timestamp: sevenDaysTimeStamp)
+        
+        XCTAssertEqual(store.receivedMessages, [.retrive])
+    }
+    
+    func test_load_doesNotCompleteWhenSUTInstanceHasBeenDeallocated() {
+        var (sut, store): (LocalFeedLoader?, FeedStoreSpy) = makeSUT()
+        
+        var recievedResult: LocalFeedLoader.LoadResult?
+        sut?.load { result in
+            recievedResult = result
+        }
+        sut = nil
+        store.completeRetrival(with: anyNSError())
+        
+        XCTAssertNil(recievedResult)
+    }
+    
     func expect(_ sut: LocalFeedLoader, toCompleteWith expectedResult: LocalFeedLoader.LoadResult, file: StaticString = #file, line: UInt = #line , when action: () -> ()) {
         let exp = expectation(description: "wait for response")
         
